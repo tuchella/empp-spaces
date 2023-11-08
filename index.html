@@ -18,6 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/p5@1.8.0/lib/p5.js"></script>
     <script>
 
+        const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
 
         const state = {
             settings: {
@@ -367,8 +368,16 @@
         function drawText(textContent,x,y,additionalText) {
             const align = textAlign().horizontal;
             
+            strokeWeight(0);
             textStyle(BOLD);
-            text(textContent.toLowerCase(),x,y);
+            if (!isFirefox) {
+                // so text rendering seems to be a bit different for each browser...
+                // non-firefox browser use a pretty tight spacing so we add a single
+                // small-ish in between each character to give em some breating room.
+                text(addLetterSpacing(textContent.toLowerCase(),1, '\u2009'),x,y);
+            } else {
+                text(textContent.toLowerCase(),x,y);
+            }
 
             if (additionalText) {
                 let tWidth = textWidth(textContent);
@@ -385,6 +394,29 @@
             
         }
 
+
+
+
+        // adds spacing between letters in a string by
+        // inserting blank characters between each letter
+        function addLetterSpacing(input, amount, spacer) {
+        
+        // 'spacer' character to use
+        // (can be passed in as an optional argument, or it
+        // will use the unicode 'hair space' one by default)
+        spacerCharacter = '\u200A' || spacer;
+        
+        // split the string into a list of characters
+        let characters = input.split('');
+        
+        // create a series of spacers using the
+        // repeat() function
+        spacerCharacter = spacerCharacter.repeat(amount);
+        
+        // use join() to combine characters with the spacer
+        // and send back as a string
+        return characters.join(spacerCharacter);
+        }
 
         function mouseDragged() {
             selection.grab();
@@ -476,8 +508,8 @@
 
         body,
         main {
-            width: 100vw;
-            height: 100vh;
+            min-width: 100vw;
+            min-height: 100vh;
             font-family: 'Gabarito', sans-serif;
             background-color: rgb(240, 240, 240);
         }
@@ -793,7 +825,7 @@ new ClipboardJS('#copy-link-btn', {
     }
 });
 
-document.getElementById("dl").addEventListener("click", downloadAsImage)
+
 function downloadAsImage() {
     //var dt = canvas.toDataURL('image/png');
     //this.href = dt;
@@ -806,6 +838,8 @@ function downloadAsImage() {
         saveCanvas(canvasWithoutKnowledge, imageFileName);
     }
 }
+document.getElementById("dl").addEventListener("click", downloadAsImage)
+document.getElementById("download-btn").addEventListener("click", downloadAsImage);
 
 
 mdc.autoInit();
