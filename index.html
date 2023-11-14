@@ -150,11 +150,22 @@
                 curveVertex(this.pos.x, this.pos.y);
             }
             grab() {
-                let b = dist(this.x, this.y, mouseX, mouseY);
-                let a = dist(this.origin.x, this.origin.y, mouseX, mouseY);
-                this.val = constrain(a / (a + b), 0, 1);
+                this.val = distToSegment(new p5.Vector(mouseX, mouseY),
+                    this.origin, new p5.Vector(this.x, this.y));
                 state.values[this.id] = round(this.val, 3);
             }
+        }
+
+        function distToSegment(p, v, w) {
+            var l2 = sq(v.x - w.x) + sq(v.y - w.y);
+            if (l2 == 0) return 0.5;
+            var t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            print(t);
+            // let q = new p5.Vector(v.x + t * (w.x - v.x),
+            //                         v.y + t * (w.y - v.y));
+            return t;
+            //return dist2(p, q);
         }
 
         function copyProperties(obj1, obj2) {
