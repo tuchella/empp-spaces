@@ -1,18 +1,112 @@
-
+//  __  __   _ _____ ___ ___ ___   _   _      ___  ___ ___ ___ ___ _  _ 
+// |  \/  | /_\_   _| __| _ \_ _| /_\ | |    |   \| __/ __|_ _/ __| \| |
+// | |\/| |/ _ \| | | _||   /| | / _ \| |__  | |) | _|\__ \| | (_ | .` |
+// |_|  |_/_/ \_\_| |___|_|_\___/_/ \_\____| |___/|___|___/___\___|_|\_|
+//
 const MDCSwitch = mdc.switchControl.MDCSwitch;
 const MDCSlider = mdc.slider.MDCSlider;
 const MDCDrawer = mdc.drawer.MDCDrawer;
 const MDCList = mdc.list.MDCList;
 const MDCTextField = mdc.textField.MDCTextField;
-//const MDCButton = mdc.button.MDCButton;
 
-/*
-new ClipboardJS('#copy-btn', {
-    text: function (trigger) {
-        //return document.querySelector('#json-code-container textarea');
-        return myCodeMirror.getValue();
+mdc.autoInit();
+
+const DEFAULT_TITLE = document.querySelector('h1').textContent;
+const titleTextField = new MDCTextField(document.getElementById("title-input"));
+titleTextField.input.addEventListener('input', (e) => {
+    const val = titleTextField.value.trim();
+    if (val.length < 1) {
+        document.querySelector('h1').textContent = DEFAULT_TITLE;
+        delete state.settings.title;
+    } else {
+        document.querySelector('h1').textContent = val;
+        state.settings.title = val;
     }
-});*/
+})
+
+let elasticityControl;
+const drawer = MDCDrawer.attachTo(document.querySelector('.mdc-drawer'));
+document.body.addEventListener('MDCDrawer:opened', () => {
+    // we initialize the elasticityControl the first time we open the settings
+    // drawer as MDC somehow doesn't properly setup the width of the slider if
+    // its parent is hidden...  
+    if (!elasticityControl) {
+        const elasticitySlider = document.querySelector('#elasticity-slider');
+        elasticityControl = new MDCSlider(elasticitySlider);
+        elasticityControl.foundation.setValue(state.settings.elasticity * 100);
+        elasticitySlider.addEventListener('MDCSlider:change', (e) => {
+            state.settings.elasticity = e.detail.value / 100;
+        });
+    }
+    updateShareLink();
+});
+function initSwitch(selector, field, onClick) {
+    const onClickListener = onClick || function(){};
+    const el = document.querySelector(selector);
+    const ctl = new MDCSwitch(el);
+    el.addEventListener('click', (e) => {
+        state.settings[field] = el.ariaChecked == "true";
+        onClickListener();
+    });
+    return ctl;    
+}
+const switchControl  = initSwitch('#basic-switch', 'showVisualMedia');
+const kControl  = initSwitch('#knowledge-switch', 'showKnowledge');
+const darkControl  = initSwitch('#darkmode-switch', 'darkMode', () => {
+    if (state.settings.darkMode) {
+        document.body.classList.add('dark');
+    } else {
+        document.body.classList.remove('dark');
+    }
+});
+const linkTextField = new MDCTextField(document.getElementById("link-text-field"));
+
+//  ___   _   ___ ___  __ _ _    _         _     _   _ ___ _       ___   _   ___ ___ 
+// | _ ) /_\ / __| __|/ /| | |  | |__ _  _| |_  | | | | _ \ |  ___/ __| /_\ | __| __|
+// | _ \/ _ \\__ \ _|/ _ \_  _| | '_ \ || |  _| | |_| |   / |_|___\__ \/ _ \| _|| _| 
+// |___/_/ \_\___/___\___/ |_|  |_.__/\_,_|\__|  \___/|_|_\____|  |___/_/ \_\_| |___|
+//                                                                               
+const Base64url = {
+    encodeBase64: (input) => {
+        let unencoded = input
+        const CHUNK_SIZE = 0x8000
+        const arr = []
+        for (let i = 0; i < unencoded.length; i += CHUNK_SIZE) {
+            // @ts-expect-error
+            arr.push(String.fromCharCode.apply(null, unencoded.subarray(i, i + CHUNK_SIZE)))
+        }
+        return btoa(arr.join(''))
+    },
+
+    encode: (input) => {
+        return Base64url.encodeBase64(input).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+    },
+
+    decodeBase64: (encoded) => {
+        const binary = atob(encoded)
+        const bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i)
+        }
+        return bytes
+    },
+
+    decode: (input) => {
+        let encoded = input
+        encoded = encoded.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '')
+        try {
+            return Base64url.decodeBase64(encoded)
+        } catch {
+            throw new TypeError('The input to be decoded is not correctly encoded.')
+        }
+    }
+}
+
+//   ___ _    ___ ___ ___  ___   _   ___ ___    ___ _____ _   _ ___ ___ 
+//  / __| |  |_ _| _ \ _ )/ _ \ /_\ | _ \   \  / __|_   _| | | | __| __|
+// | (__| |__ | ||  _/ _ \ (_) / _ \|   / |) | \__ \ | | | |_| | _|| _| 
+//  \___|____|___|_| |___/\___/_/ \_\_|_\___/  |___/ |_|  \___/|_| |_|  
+//                                                               
 new ClipboardJS('#copy-link-btn', {
     target: function (trigger) {
         //return document.querySelector('#json-code-container textarea');
@@ -21,7 +115,11 @@ new ClipboardJS('#copy-link-btn', {
     }
 });
 
-
+//   ___ __  __   _   ___ ___   ___   _____      ___  _ _    ___   _   ___  
+//  |_ _|  \/  | /_\ / __| __| |   \ / _ \ \    / / \| | |  / _ \ /_\ |   \ 
+//   | || |\/| |/ _ \ (_ | _|  | |) | (_) \ \/\/ /| .` | |_| (_) / _ \| |) |
+//  |___|_|  |_/_/ \_\___|___| |___/ \___/ \_/\_/ |_|\_|____\___/_/ \_\___/ 
+//
 function downloadAsImage() {
     //var dt = canvas.toDataURL('image/png');
     //this.href = dt;
@@ -37,47 +135,11 @@ function downloadAsImage() {
 document.getElementById("dl").addEventListener("click", downloadAsImage)
 document.getElementById("download-btn").addEventListener("click", downloadAsImage);
 
-
-mdc.autoInit();
-
-const linkTextField = new MDCTextField(document.getElementById("link-text-field"));
-
-const DEFAULT_TITLE = document.querySelector('h1').textContent;
-const titleTextField = new MDCTextField(document.getElementById("title-input"));
-titleTextField.input.addEventListener('input', (e) => {
-    const val = titleTextField.value.trim();
-    if (val.length < 1) {
-        document.querySelector('h1').textContent = DEFAULT_TITLE;
-        delete state.settings.title;
-    } else {
-        console.log('title change', val);
-        document.querySelector('h1').textContent = val;
-        state.settings.title = val;
-    }
-})
-
-let elasticityControl;
-const drawer = MDCDrawer.attachTo(document.querySelector('.mdc-drawer'));
-const switchControl = new MDCSwitch(document.querySelector('#basic-switch'));
-document.querySelector('#basic-switch').addEventListener('click', (e) => {
-    state.settings.showVisualMedia = document.querySelector('#basic-switch').ariaChecked == "true";
-});
-const kControl = new MDCSwitch(document.querySelector('#knowledge-switch'));
-document.querySelector('#knowledge-switch').addEventListener('click', (e) => {
-    state.settings.showKnowledge = document.querySelector('#knowledge-switch').ariaChecked == "true";
-});
-const darkControl = new MDCSwitch(document.querySelector('#darkmode-switch'));
-document.querySelector('#darkmode-switch').addEventListener('click', (e) => {
-    state.settings.darkMode = document.querySelector('#darkmode-switch').ariaChecked == "true";
-    if (state.settings.darkMode) {
-        document.body.classList.add('dark');
-    } else {
-        document.body.classList.remove('dark');
-    }
-});
-//mdc.ripple.MDCRipple.attachTo(document.querySelector('#copy-btn'));
-//mdc.ripple.MDCRipple.attachTo(document.querySelector('#paste-btn'));
-
+//  ___ _  _   _   ___ ___   _    ___ _  _ _  __
+// / __| || | /_\ | _ \ __| | |  |_ _| \| | |/ /
+// \__ \ __ |/ _ \|   / _|  | |__ | || .` | ' < 
+// |___/_||_/_/ \_\_|_\___| |____|___|_|\_|_|\_\
+//
 function shortShareLink() {
     const settingsArray = new Uint8Array([
         state.values.presence,
@@ -101,74 +163,12 @@ function shortShareLink() {
         state.settings.darkMode * 4
     );
 
-    const encodeBase64 = (input) => {
-        let unencoded = input
-        const CHUNK_SIZE = 0x8000
-        const arr = []
-        for (let i = 0; i < unencoded.length; i += CHUNK_SIZE) {
-            // @ts-expect-error
-            arr.push(String.fromCharCode.apply(null, unencoded.subarray(i, i + CHUNK_SIZE)))
-        }
-        return btoa(arr.join(''))
-    }
-
-    const encode = (input) => {
-        return encodeBase64(input).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-    }
-
-    const decodeBase64 = (encoded) => {
-        const binary = atob(encoded)
-        const bytes = new Uint8Array(binary.length)
-        for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i)
-        }
-        return bytes
-    }
-
-    const decode = (input) => {
-        let encoded = input
-        encoded = encoded.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '')
-        try {
-            return decodeBase64(encoded)
-        } catch {
-            throw new TypeError('The input to be decoded is not correctly encoded.')
-        }
-    }
-
-    console.log(settingsArray);
-    const encoded = encode(settingsArray);
-    console.log(encoded);
-    const decoded = decode(encoded);
-    console.log(decoded);
+    const encoded = Base64url.encode(settingsArray);
     return encoded;
 }
 
 function updateShareLink() {
     const shortLink = shortShareLink();
-    // this is still a very inefficient encoding but we should be well below the 2048 character limit for URLs still...
-    const fary = new Float32Array([
-        state.values.presence,
-        state.values.embodiment,
-        state.values.trasparency,
-        state.values.freedom,
-        state.values.space,
-        state.values.mediation,
-        state.values.camouflage,
-        state.values.body,
-        state.values.culturalKnowledge,
-        state.values.workbasedKnowledge,
-        state.visualMediaAngle,
-        state.settings.elasticity,
-        0, /* PLACE HOLDER FOR BOOLEAN SETTINGS */
-    ]);
-    let uint = new Uint8Array(fary.buffer);
-    uint[uint.length - 4] = state.settings.showVisualMedia;
-    uint[uint.length - 3] = state.settings.showKnowledge;
-    uint[uint.length - 2] = state.settings.darkMode;
-    uint[uint.length - 1] = false;
-    let str = btoa(String.fromCharCode.apply(null, uint));
-    str = encodeURIComponent(str);
-
     const url = window.location.href.split('?')[0].replace('#', '')
         //+ '?state=' + str +
         + '?s=' + shortLink +
@@ -176,58 +176,12 @@ function updateShareLink() {
     linkTextField.foundation.setValue(url);
 }
 
-document.body.addEventListener('MDCDrawer:opened', () => {
-    const elasticitySlider = document.querySelector('#elasticity-slider');
-    if (!elasticityControl) {
-        elasticityControl = new MDCSlider(elasticitySlider);
-        elasticityControl.foundation.setValue(state.settings.elasticity * 100);
-        elasticitySlider.addEventListener('MDCSlider:change', (e) => {
-            state.settings.elasticity = e.detail.value / 100;
-        });
-    }
-    updateShareLink();
-
-    /*
-    window.myCodeMirror = CodeMirror(document.getElementById("json-code-container"), {
-        value: JSON.stringify(state, null, 1),
-        mode: "javascript"
-    });
-    console.log("codeMirror", myCodeMirror);
-    */
-
-
-
-    //codeBlock.innerHTML = JSON.stringify(state, null, 1);
-    //document.querySelector("#paste-output").textContent = 
-    //hljs.highlightElement(codeBlock);
-});
-
 function decodeState() {
     const params = new URLSearchParams(window.location.search);
     const stateParam = params.get('state');
     const shortState = params.get('s');
-    console.log(params);
     if (shortState) {
-        const decodeBase64 = (encoded) => {
-            const binary = atob(encoded)
-            const bytes = new Uint8Array(binary.length)
-            for (let i = 0; i < binary.length; i++) {
-                bytes[i] = binary.charCodeAt(i)
-            }
-            return bytes
-        }
-
-        const decode = (input) => {
-            let encoded = input
-            encoded = encoded.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '')
-            try {
-                return decodeBase64(encoded)
-            } catch {
-                throw new TypeError('The input to be decoded is not correctly encoded.')
-            }
-        }
-
-        const stateAsIntArray = decode(shortState);
+        const stateAsIntArray = Base64url.decode(shortState);
         state.values.presence = stateAsIntArray[0] / 255;
         state.values.embodiment = stateAsIntArray[1] / 255;
         state.values.trasparency = stateAsIntArray[2] / 255;
@@ -239,7 +193,6 @@ function decodeState() {
         state.values.culturalKnowledge = stateAsIntArray[8] / 255;
         state.values.workbasedKnowledge = stateAsIntArray[9] / 255;
         state.visualMediaAngle = ((stateAsIntArray[10] / 255) * 2 * Math.PI) - Math.PI;
-        console.log(state.visualMediaAngle);
         state.settings.elasticity = stateAsIntArray[11] / 255;
 
         const booleanSettings = stateAsIntArray[12];
@@ -251,6 +204,8 @@ function decodeState() {
         state.settings.darkMode = (booleanSettings & 0b00000100) > 0;
         darkControl.selected = state.settings.darkMode;
     }
+    
+    // ======= LEGACY CODE TO SUPPORT OLD LINKS STILL USING OLD INEFFICIENT BAD NOT GOOD STATE ENCODING ====
     if (stateParam) {
         let blob = atob(decodeURIComponent(stateParam));
         let ary_buf = new ArrayBuffer(blob.length);
@@ -280,6 +235,8 @@ function decodeState() {
             darkControl.selected = state.settings.darkMode;
         }
     }
+    // =================================================================================================
+
     const title = params.get('title');
     if (title) {
         const decodedTitle = decodeURIComponent(title);

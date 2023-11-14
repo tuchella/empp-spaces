@@ -51,7 +51,6 @@ class VisualMediaArrow extends Grabbable {
         this.position.y = avv.y;
         const clr = this.hover ? color('red') : color('darkred');
         arrow(avv.x, avv.y, center.x, center.y, clr);
-        //if (av < 0) { 
         const avvText = avv.copy()
             .sub(center)
             .mult(1.01)
@@ -66,13 +65,10 @@ class VisualMediaArrow extends Grabbable {
 
         }
         avvText.add(offset);
-        // print(avv.y);
         textAlign(CENTER);
-
         text("visual media", avvText.x, avvText.y);
     }
     grab() {
-
         const mouse = createVector(mouseX, mouseY);
         this.angle = mouse.sub(center).heading();
         state.visualMediaAngle = round(this.angle, 3);
@@ -96,8 +92,6 @@ class Dim extends Grabbable {
         this.origin = origin;
     }
     draw() {
-
-        //this.val = constrain(this.val + ((random()*0.02)-0.01),0.0,1.0);
         this.pos.x = lerp(this.origin.x, this.x, this.val * 0.95);
         this.pos.y = lerp(this.origin.y, this.y, this.val * 0.95);
         arrow(this.x, this.y, this.origin.x, this.origin.y);
@@ -110,29 +104,23 @@ class Dim extends Grabbable {
         point(this.pos.x, this.pos.y);
         strokeWeight(1);
         stroke(0);
-
-
     }
     drawCurve() {
         curveVertex(this.pos.x, this.pos.y);
     }
     grab() {
-        this.val = distToSegment(new p5.Vector(mouseX, mouseY),
+        this.val = getClosestPointOnLine(new p5.Vector(mouseX, mouseY),
             this.origin, new p5.Vector(this.x, this.y));
         state.values[this.id] = round(this.val, 3);
     }
 }
 
-function distToSegment(p, v, w) {
+function getClosestPointOnLine(p, v, w) {
     var l2 = sq(v.x - w.x) + sq(v.y - w.y);
     if (l2 == 0) return 0.5;
     var t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
     t = Math.max(0, Math.min(1, t));
-    print(t);
-    // let q = new p5.Vector(v.x + t * (w.x - v.x),
-    //                         v.y + t * (w.y - v.y));
     return t;
-    //return dist2(p, q);
 }
 
 function copyProperties(obj1, obj2) {
@@ -147,32 +135,6 @@ function copyProperties(obj1, obj2) {
     });
 };
 
-/*  function pasteState() {
-    let clipText = '{}';
-    // try {
-    //     const result = await navigator.permissions.query({ name: "clipboard-read" });
-    //     if (result.state === "granted" || result.state === "prompt") {
-    //         clipText = await navigator.clipboard.readText();
-    //     }
-    // } catch (error) {
-        let pasteText = document.querySelector("#paste-output");
-        pasteText.focus();
-        pasteText.textContent = "";
-        document.execCommand("paste");
-        clipText = pasteText.textContent;
-        console.log(pasteText);
-    // }
-    console.log(clipText);
-    const newState = JSON.parse(clipText);
-    copyProperties(state, newState);
-    setup();
-
-}
-function copyState() {
-
-} */
-
-
 function setup() {
     createCanvas(1000, 800, document.getElementById('sketch-canvas'));
     canvasWithoutKnowledge = createGraphics(800, 800);
@@ -186,12 +148,6 @@ function setup() {
     visArrow = new VisualMediaArrow();
     NO_SELECTION = new Grabbable(createVector(-1000, -1000));
 
-
-    //arrow(20,400,780,400);
-    //arrow(400,20,400,780);
-    //arrow(120,120,680,680);
-    //arrow(120,680,680,120);
-
     vPre = new Dim(400, 20, center, "presence");
     vEmb = new Dim(680, 120, center, "embodiment");
     vTra = new Dim(780, 400, center, "trasparency");
@@ -202,17 +158,16 @@ function setup() {
     vBod = new Dim(120, 120, center, "body");
     dims = [vPre, vEmb, vTra, vDeg, vSpa, vMed, vCam, vBod];
 
-
+    // TRANSLATE ALL ARROWS 200px to the right
     dims.forEach(d => {
         d.x += 200;
-
     });
 
-    const positionOfKnowledge = 120;
     const originOfKnowledge = createVector(120, height / 2);
-    vCulKno = new Dim(originOfKnowledge.x, height - 20, originOfKnowledge, "culturalKnowledge");
-    vWorKno = new Dim(originOfKnowledge.x, 20, originOfKnowledge, "workbasedKnowledge");
-
+    vCulKno = new Dim(originOfKnowledge.x, height - 20, 
+        originOfKnowledge, "culturalKnowledge");
+    vWorKno = new Dim(originOfKnowledge.x, 20, 
+        originOfKnowledge, "workbasedKnowledge");
 }
 
 function arrow(a, b, c, d, col) {
@@ -229,9 +184,7 @@ function arrow(a, b, c, d, col) {
     fill(col);
     line(a, b, c, d);
     triangle(a, b, a + n.x - v.x, b + n.y - v.y, a - n.x - v.x, b - n.y - v.y);
-    //triangle(c,d,c+n.x+v.x,d+n.y+v.y,c-n.x+v.x,d-n.y+v.y);
     strokeWeight(0);
-
 }
 
 function drawArrow(v) {
@@ -239,9 +192,6 @@ function drawArrow(v) {
 }
 
 function drawKnowledge() {
-    //arrow(position,20,position,height/2);
-    //arrow(position,height-20,position,height/2);
-
     textAlign(CENTER);
     fill((state.settings.darkMode ? 255 : 0));
     stroke((state.settings.darkMode ? 100 : 0));
@@ -282,20 +232,13 @@ function resetState() {
 
 function draw() {
     resetState();
-    if (state.settings.darkMode) {
-        background(0);
-    } else {
-        background(240);
-    }
-
+    background(state.settings.darkMode ? 0 : 240);
     if (state.settings.showKnowledge) {
         drawKnowledge();
     }
-
     if (state.settings.showVisualMedia) {
         visArrow.draw();
     }
-
 
     fill(100, 100, 100, 40);
     stroke((state.settings.darkMode ? 100 : 0));
@@ -310,13 +253,9 @@ function draw() {
     dims[2].drawCurve();
     endShape();
 
-    //stroke(255, 0, 255);
     dims.forEach(d => {
         d.draw();
     });
-
-
-    //}
 
     translate(200, 0);
     textSize(18);
@@ -335,9 +274,6 @@ function draw() {
     drawText("Transparency", 785, 380);
     drawText("degrees of freedom", 705, 710, "(many/few)");
     translate(-200, 0);
-
-
-
 
     document.getElementById("sketch-canvas").style.cursor = cursor;
 }
@@ -372,13 +308,9 @@ function drawText(textContent, x, y, additionalText) {
 
 }
 
-
-
-
 // adds spacing between letters in a string by
 // inserting blank characters between each letter
 function addLetterSpacing(input, amount, spacer) {
-
     // 'spacer' character to use
     // (can be passed in as an optional argument, or it
     // will use the unicode 'hair space' one by default)
@@ -398,27 +330,5 @@ function addLetterSpacing(input, amount, spacer) {
 
 function mouseDragged() {
     selection.grab();
-    let nn = dims[0];
-    let minDist = width;
-    //print(av);
-
-    /*
-    dims.forEach(d => {
-      let distance = dist(d.pos.x,d.pos.y,mouseX,mouseY);
-      if (distance < minDist) {
-        nn = d;
-        minDist = distance;
-      }
-    });
-    if (minDist < 50) {
-      
-      fill(0,0,255); 
-      ellipse(nn.pos.x, nn.pos.y, 50, 50); 
-      let a = dist(nn.x,nn.y,mouseX,mouseY);
-      let b = dist(center.x,center.y,mouseX,mouseY);
-      nn.val = constrain(a / (a+b),0,1);
-    }
-    */
-    // prevent default
     return false;
 }
