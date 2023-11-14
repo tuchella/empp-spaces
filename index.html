@@ -882,7 +882,73 @@ document.querySelector('#darkmode-switch').addEventListener('click', (e) => {
 //mdc.ripple.MDCRipple.attachTo(document.querySelector('#copy-btn'));
 //mdc.ripple.MDCRipple.attachTo(document.querySelector('#paste-btn'));
 
+function shortShareLink() {
+    const settingsArray = new Uint8Array([
+        state.values.presence,
+        state.values.embodiment,
+        state.values.trasparency,
+        state.values.freedom,
+        state.values.space,
+        state.values.mediation,
+        state.values.camouflage,
+        state.values.body,
+        state.values.culturalKnowledge,
+        state.values.workbasedKnowledge,
+        (state.visualMediaAngle + Math.PI) / (Math.PI * 2),
+        state.settings.elasticity,
+        0, /* PLACE HOLDER FOR BOOLEAN SETTINGS */
+    ].map(f => Math.max(Math.round(f * 255), 1)));
+
+    settingsArray[12] = (
+        state.settings.showVisualMedia +
+        state.settings.showKnowledge * 2 +
+        state.settings.darkMode * 4
+    );
+
+    const encodeBase64 = (input) => {
+        let unencoded = input
+        const CHUNK_SIZE = 0x8000
+        const arr = []
+        for (let i = 0; i < unencoded.length; i += CHUNK_SIZE) {
+            // @ts-expect-error
+            arr.push(String.fromCharCode.apply(null, unencoded.subarray(i, i + CHUNK_SIZE)))
+        }
+        return btoa(arr.join(''))
+    }
+
+    const encode = (input) => {
+        return encodeBase64(input).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+    }
+
+    const decodeBase64 = (encoded) => {
+        const binary = atob(encoded)
+        const bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i)
+        }
+        return bytes
+    }
+
+    const decode = (input) => {
+        let encoded = input
+        encoded = encoded.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '')
+        try {
+            return decodeBase64(encoded)
+        } catch {
+            throw new TypeError('The input to be decoded is not correctly encoded.')
+        }
+    }
+    
+    console.log(settingsArray);
+    const encoded = encode(settingsArray);
+    console.log(encoded);
+    const decoded = decode(encoded);
+    console.log(decoded);
+    return encoded;
+}
+
 function updateShareLink() {
+    const shortLink = shortShareLink();
     // this is still a very inefficient encoding but we should be well below the 2048 character limit for URLs still...
     const fary = new Float32Array([
         state.values.presence,
@@ -895,7 +961,6 @@ function updateShareLink() {
         state.values.body,
         state.values.culturalKnowledge,
         state.values.workbasedKnowledge,
-
         state.visualMediaAngle,
         state.settings.elasticity,
         0, /* PLACE HOLDER FOR BOOLEAN SETTINGS */
@@ -908,8 +973,9 @@ function updateShareLink() {
     let str = btoa(String.fromCharCode.apply(null, uint)); 
     str = encodeURIComponent(str);
 
-    const url = window.location.href.split('?')[0]
-        + '?state=' + str +
+    const url = window.location.href.split('?')[0].replace('#','')
+        //+ '?state=' + str +
+        + '?s=' + shortLink +
         (state.settings.title ? '&title=' + encodeURIComponent(state.settings.title) : '');
     linkTextField.foundation.setValue(url);
 }
@@ -942,10 +1008,55 @@ document.body.addEventListener('MDCDrawer:opened', () => {
 
 function decodeState() {
     const params = new URLSearchParams(window.location.search);
-    const str = params.get('state');
+    const stateParam = params.get('state');
+    const shortState = params.get('s');
     console.log(params);
-    if (str) {
-        let blob = atob(decodeURIComponent(str));
+    if (shortState) {
+        const decodeBase64 = (encoded) => {
+            const binary = atob(encoded)
+            const bytes = new Uint8Array(binary.length)
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i)
+            }
+            return bytes
+        }
+
+        const decode = (input) => {
+            let encoded = input
+            encoded = encoded.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '')
+            try {
+                return decodeBase64(encoded)
+            } catch {
+                throw new TypeError('The input to be decoded is not correctly encoded.')
+            }
+        }
+
+        const stateAsIntArray = decode(shortState);
+        state.values.presence = stateAsIntArray[0] / 255;
+        state.values.embodiment = stateAsIntArray[1] / 255;
+        state.values.trasparency = stateAsIntArray[2] / 255;
+        state.values.freedom = stateAsIntArray[3] / 255;
+        state.values.space = stateAsIntArray[4] / 255;
+        state.values.mediation = stateAsIntArray[5] / 255;
+        state.values.camouflage = stateAsIntArray[6] / 255;
+        state.values.body = stateAsIntArray[7] / 255;
+        state.values.culturalKnowledge = stateAsIntArray[8] / 255;
+        state.values.workbasedKnowledge = stateAsIntArray[9] / 255;
+        state.visualMediaAngle = ((stateAsIntArray[10] / 255) * 2 * Math.PI) - Math.PI;
+        console.log(state.visualMediaAngle);
+        state.settings.elasticity = stateAsIntArray[11] / 255;
+
+        const booleanSettings = stateAsIntArray[12];
+        //                                                  0b11111111
+        state.settings.showVisualMedia = (booleanSettings & 0b00000001) > 0;
+        switchControl.selected = state.settings.showVisualMedia;
+        state.settings.showKnowledge = (booleanSettings & 0b00000010) > 0;
+        kControl.selected = state.settings.showKnowledge;
+        state.settings.darkMode = (booleanSettings & 0b00000100) > 0;
+        darkControl.selected = state.settings.darkMode;
+    }
+    if (stateParam) {
+        let blob = atob(decodeURIComponent(stateParam));
         let ary_buf = new ArrayBuffer(blob.length);
         let dv = new DataView(ary_buf);
         for (let i = 0; i < blob.length; i++) dv.setUint8(i, blob.charCodeAt(i));
